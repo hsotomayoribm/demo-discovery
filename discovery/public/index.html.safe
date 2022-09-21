@@ -1,0 +1,547 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Reading Comprehension</title>
+		<link rel="stylesheet" href="css/bulma.min.css">
+		<link rel="stylesheet" href="css/bulma-docs.min.css">
+		<style>
+.card {
+	margin-top: 1em;
+}
+		</style>
+		<script src="js/jquery-3.6.0.min.js"></script>
+		<script defer src="js/all.js"></script>
+		<script type='text/javascript'>
+
+//--GLOBAL VARIABLES--
+var COLLECTION_IDS = ['42e63309-48bf-3802-0000-0178a3b42ced'];
+var FIELDS = ['title', 'text'];
+var MAX_PER_DOCUMENT = 5;
+var CHARACTERS = 850;
+var MAX_ANSWERS_PER_PASSAGE = 1;
+var RETURN = ['document_id','extracted_metadata.filename','extracted_metadata.title','metadata.source.url'];
+var PER_DOCUMENT = true;
+var SERVER_PARAMS = {};
+var DOC_REF = "results"
+
+//--FUNCTIONS--
+//--(No jquery/DOM reference)--
+function highlightAnswer(passage_text, passage_start, answer_start, answer_end, open, closed) {
+/*--wrap tags around answer in passage text--*/
+	var position = answer_end-passage_start;
+	var passage_with_highlight = [passage_text.slice(0, position), closed, passage_text.slice(position)].join('');
+
+	position = answer_start-passage_start;
+	passage_with_highlight = [passage_with_highlight.slice(0, position), open, passage_with_highlight.slice(position)].join('');
+
+	return passage_with_highlight;
+}
+
+function extractAnswer(passage_text, passage_start, answer_start, answer_end) {
+/*--extract answer text from passage text--*/
+ 	return passage_text.slice((answer_start-passage_start),(answer_end-passage_start));
+}
+
+function normalizePassages(payload) {
+/*--extract and normalize passage values from Discovery REST payload--*/
+	function compare(a, b) {
+	/*--for sorting--*/
+		return b.confidence - a.confidence;
+	}
+
+	function stripEmphasis(passage_text) {
+	/*--Strip <em> & </em> tags from string--*/
+		var splitOpen = passage_text.split('<em>');
+		var highlight = splitOpen.join('');
+		var splitClosed = highlight.split('</em>');
+		var highlight = splitClosed.join('');
+		return highlight;
+	}
+
+	var passages = [];
+	for (i in payload.results) {
+		var result = payload.results[i];
+		var displayname = '';
+		if ('extracted_metadata' in result) {
+			var title = result.extracted_metadata.title;
+			var filename = result.extracted_metadata.filename;
+			if (title != '' && title != undefined) {
+				displayname = result.extracted_metadata.title;
+			} else if (filename != undefined) {
+				displayname = result.extracted_metadata.filename;
+			}
+		}
+		var url = '';
+		if ('metadata' in result) {
+			if ('source' in result.metadata) {
+				if ('url' in result.metadata.source) {
+					url = result.metadata.source.url;
+				}
+			}
+		}
+		for (j in result.document_passages) {
+			var document_passage = result.document_passages[j];
+			var passage_text = document_passage.passage_text;
+			var passage_start = document_passage.start_offset;
+			var passage_end = document_passage.end_offset;
+			var answers = document_passage.answers;
+			for (k in answers) {
+				var answer = answers[k];
+				var answer_text = answer.answer_text;
+				var answer_start = answer.start_offset;
+				var answer_end = answer.end_offset;
+				var confidence = answer.confidence;
+				passages.push({
+					displayname: displayname,
+					url: url,
+					passage_text: highlightAnswer(stripEmphasis(passage_text), passage_start, answer_start, answer_end, '<span class="has-text-link has-background-link-light">', '</span>'),
+					passage_start: passage_start,
+					passage_end: passage_end,
+					answer_text: answer_text,
+					answer_start: answer_start,
+					answer_end: answer_end,
+					confidence: confidence
+				});
+			}
+		}
+	}
+	passages.sort(compare);
+	return passages;
+}
+
+function formatContentSources(indexes, collection_ids) {
+/*--dynamically build html for content sources specified in config json--*/
+	var content_sources = [];
+	var content_source_format = '<label class="checkbox">\
+	<input type="checkbox" id="[[COLLECTION_ID]]" checked>\
+	[[INDEX]]\
+</label>\
+';
+	for (i in indexes) {
+		var index = indexes[i];
+		var collection_id = collection_ids[i];
+		var content_source = content_source_format;
+		var content_source = content_source.replace('[[INDEX]]', index);
+		var content_source = content_source.replace('[[COLLECTION_ID]]', collection_id);
+		content_sources.push(content_source);
+	}
+	return content_sources.join('<br>');
+}
+
+function  formatAnswers(passages) {
+/*--dynamically build html for answer cards--*/
+	var answers = '';
+	var answer_format = '<div class="box">\
+	<article class="media">\
+		<div class="media-content">\
+			<div class="content">\
+				<p class="answer_display is-size-4">\
+					[[ANSWER_TEXT]]\
+				</p>\
+				<p class="passage_display is-size-6 is-hidden">\
+					[[PASSAGE_TEXT]]\
+				</p>\
+			</div>\
+			<nav class="level is-mobile">\
+				<div class="level-left">\
+					<a class="level-item" aria-label="expand">\
+						<span class="icon is-small toggle-display">\
+							<i class="fas fa-expand" aria-hidden="true"></i>\
+						</span>\
+					</a>\
+					<p class="level-item">\
+						<small>\
+							<a href="[[URL]]" target="_blank">[[DISPLAY_NAME]]</a>\
+						</small>\
+					</p>\
+				</div>\
+				<div class="level-right">\
+					<div class="level-item has-text-centered">\
+						<div>\
+							<p class="heading">Score</p>\
+							<p class="title">[[CONFIDENCE]]</p>\
+						</div>\
+					</div>\
+				</div>\
+			</nav>\
+		</div>\
+	</article>\
+</div>\
+';
+	for (i in passages) {
+		var passage = passages[i];
+		var answer = answer_format;
+		var answer = answer.replace('[[ANSWER_TEXT]]', passage.answer_text);
+		var answer = answer.replace('[[PASSAGE_TEXT]]', passage.passage_text);
+		var answer = answer.replace('[[URL]]', passage.url);
+		var answer = answer.replace('[[DISPLAY_NAME]]', passage.displayname);
+		var answer = answer.replace('[[CONFIDENCE]]', (passage.confidence*100).toFixed(1));
+		answers = answers + answer;
+	}
+	return answers;
+}
+
+//--JQUERY EVENT HANDLER--
+//--page ready--
+$(document).ready(function() {
+
+	//--FUNCTIONS--
+	//--(jquery/DOM reference)--
+	function assignClass($this, css_class) {
+		if (! $this.hasClass(css_class)) {
+			$this.addClass(css_class);
+		}
+		return $this;
+	}
+
+	function removeClass($this, css_class) {
+		if ($this.hasClass(css_class)) {
+			$this.removeClass(css_class);
+		}
+		return $this;
+	}
+
+	function reveal(id) {
+		removeClass($(id), "is-hidden");
+	}
+
+	function hide(id) {
+		assignClass($(id), "is-hidden");
+	}
+
+	function displayError() {
+		reveal("#error_message");
+		hide("#warning_message");
+		hide("#success_message");
+		hide("#answers");
+	}
+
+	function displayWarning() {
+		hide("#error_message");
+		reveal("#warning_message");
+		hide("#success_message");
+		hide("#answers");
+	}
+
+	function displaySuccess() {
+		hide("#error_message");
+		hide("#warning_message");
+		reveal("#success_message");
+		reveal("#answers");
+	}
+
+	function displayNothing() {
+		hide("#error_message");
+		hide("#warning_message");
+		hide("#success_message");
+		hide("#answers");
+	}
+
+	function reconfig(config) {
+	/*--Reset global variable values and redraw page based on config json--*/
+		$("div#content_sources").html(formatContentSources(config.indexes, config.collection_ids));
+		if (config.collection_ids !== undefined) {COLLECTION_IDS = config.collection_ids;}
+		if (config.fields !== undefined) {FIELDS = config.fields;}
+		if (config.max_per_document !== undefined) {MAX_PER_DOCUMENT = config.max_per_document;}
+		if (config.characters !== undefined) {CHARACTERS = config.characters;}
+		if (config.max_answers_per_passage !== undefined) {MAX_ANSWERS_PER_PASSAGE = config.max_answers_per_passage;}
+		if (config.return !== undefined) {RETURN = config.return;}
+		if (config.per_document !== undefined) {PER_DOCUMENT = config.per_document;}
+		if (config.apikey !== undefined) {SERVER_PARAMS.apikey = config.apikey;}
+		if (config.endpoint !== undefined) {SERVER_PARAMS.endpoint = config.endpoint;}
+		if (config.project_id !== undefined) {SERVER_PARAMS.project_id = config.project_id;}
+	}
+
+	function queryDiscovery(question) {
+	/*--Invoke Discovery query to get answers--*/
+		var client_params = {
+			"collection_ids": COLLECTION_IDS,	//string[]
+			"filter": undefined,	//string
+			"query": undefined,	//string
+			"natural_language_query": question,	//string
+			"aggregation": undefined,	//string
+			"count": undefined,	//integer
+			"return": RETURN,	//string[]
+			"offset": undefined,	//integer
+			"sort": undefined,	//string
+			"highlight": undefined,	//boolean
+			"spelling_suggestions": undefined,	//boolean
+			"table_results": {	//object
+				"enabled": undefined,	//boolean
+				"count": undefined	//integer
+			},
+			"suggested_refinements": {	//object
+				"enabled": undefined,	//boolean
+				"count": undefined	//integer
+			},
+			"passages": {	//object
+				"enabled": true,	//boolean
+				"per_document": PER_DOCUMENT,	//boolean
+				"max_per_document": MAX_PER_DOCUMENT,	//integer
+				"fields":	FIELDS,//string[]
+				"count": undefined,	//integer
+				"characters": CHARACTERS,	//integer
+				"find_answers": true,	//boolean
+				"max_answers_per_passage": MAX_ANSWERS_PER_PASSAGE //integer
+			}
+		};
+		var body = {
+			"client_params": client_params,
+			"server_params": SERVER_PARAMS
+		}
+
+		var input = $("input#gaama");
+		assignClass(input, "is-warning");
+
+		console.log("ajax call...");
+		$.ajax({
+			url: "/query",
+			method: "POST",
+			data: JSON.stringify(body),
+			dataType: 'json',
+			contentType: 'application/json',
+			success: function(result, status, jqXHR ){
+				console.log("success ajax...");
+				var payload = JSON.parse(result);
+				if (payload.hasOwnProperty('errors')) {
+					console.log("'errors' found in payload...");
+					console.log(payload.errors);
+					displayError();
+				} else if (! payload.hasOwnProperty('results')) {
+					console.log("no 'results' in payload...");
+					console.log(payload);
+					displayError();
+				} else {
+					console.log(payload);
+					var passages = normalizePassages(payload);
+					if (passages.length > 0) {
+						var answers = formatAnswers(passages);
+						displaySuccess();
+						$('div#answers').html(answers);
+					} else {
+						displayWarning();
+					}
+				}
+				removeClass(input, "is-warning");
+			},
+			error(jqXHR, textStatus, errorThrown){
+				console.log("error ajax...");
+				displayError();
+				removeClass(input, "is-warning");
+			}
+		});
+	}
+//--QUERY EVENT HANDLERS--
+	$(document).on("click", "span.toggle-display" , function() {
+	/*--Toggle between passage highlight and answer card views--*/
+		var icon = $(this).find('svg');
+		icon.toggleClass('fa-expand').toggleClass('fa-compress');
+
+		var ancestor = $(this).parent().parent().parent().parent();
+		ancestor.find('p.answer_display').toggleClass('is-hidden');
+		ancestor.find('p.passage_display').toggleClass('is-hidden');
+	});
+
+	$("button.delete").click(function() {
+	/*--Clear left display or reconfig--*/
+		if ($(this).attr('id') == 'content_index_button') {
+			$("div#content_sources").toggleClass('is-hidden');
+			$("div#content_config").toggleClass('is-hidden');
+			var config_json = $("textarea#config_json").val().trim();
+			if (config_json.length > 0) {
+				try {
+					var config = JSON.parse(config_json);
+					reconfig(config);
+				} catch(e) {
+					alert(e.message);
+				} finally {
+					$("textarea#config_json").val('');
+				}
+			}
+		} else {
+			displayNothing();
+		}
+	});
+
+	$(document).on("click", "input[type='checkbox']" , function() {
+		var id = $(this).attr('id');
+		if ($(this).is("[checked]")) {
+			$(this).removeAttr( "checked" );
+			var i = COLLECTION_IDS.indexOf(id);
+			if (i > -1) {
+				COLLECTION_IDS.splice(i, 1);
+			}
+		} else {
+			$(this).attr("checked", "");
+			COLLECTION_IDS.push(id);
+		}
+		if (COLLECTION_IDS.length > 0) {
+			$("input#gaama").removeAttr("disabled");
+		} else {
+			$("input#gaama").attr("disabled", "");
+		}
+	});
+
+	$( "input#gaama" ).keypress(function(event) {
+	//User presses enter key
+		if (event.originalEvent.key == 'Enter') {
+		//At least one content source is checked
+			if ($("div#content_sources").find("input[checked]").length > 0) {
+			//Question input is not blank
+				var question = $("input#gaama").val().trim();
+				if (question != '') {
+					queryDiscovery(question);
+				}
+			}
+		}
+	});
+
+	$("input[type='radio']").click(function() {
+		DOC_REF = $(this).attr('id');
+	});
+
+});
+		</script>
+	</head>
+	<body>
+		<!-- Title/Header -->
+		<section class="hero is-link">
+			<div class="hero-body">
+				<p class="title">
+					Reading Comprehension Demonstration
+				</p>
+				<p class="subtitle">
+					IBM Watson Discovery
+				</p>
+			</div>
+		</section>
+		<!-- Sub Title -->
+		<section class="hero is-small is-link">
+			<div class="hero-body has-background-link-light has-text-link">
+				<p class="is-size-6">
+					Watson Discovery uses natural language capabilities to extract specific answers from your documents, including scores that indicate how confident the system is in each answer.
+				</p>
+			</div>
+		</section>
+		<!-- Body -->
+		<section class="hero is-small">
+			<!-- Input field (go ahead ask me anything...)-->
+			<div class="hero-body">
+				<div class="field">
+					<p class="control has-icons-left">
+						<input class="input" id="gaama" placeholder="Go ahead ask me anything...then press enter">
+						<span class="icon is-small is-left">
+							<i class="fas fa-search"></i>
+						</span>
+					</p>
+				</div>
+				<!-- Search facets and results -->
+				<div class="columns is-1-mobile is-0-tablet is-3-desktop is-8-widescreen is-2-fullhd">
+					<!-- Left Column -->
+					<div class="column is-one-third">
+						<!-- Indexed Content -->
+						<article id="content_index" class="message is-link">
+							<div class="message-header">
+								<p>Answers facets</p>
+								<button id="content_index_button" class="delete" aria-label="delete"></button>
+							</div>
+							<div class="message-body">
+								<div id="answer_facets">
+									<b>Content sources:</b>
+									<div id="content_config" class="is-hidden">
+										<div class="field">
+											<div class="control">
+												<textarea id="config_json" class="textarea has-text-link" placeholder="Paste in config json..."></textarea>
+											</div>
+										</div>
+									</div>
+									<div id="content_sources" class="control">
+										<label class="checkbox">
+											<input type="checkbox" id="42e63309-48bf-3802-0000-0178a3b42ced" checked>
+											IBM Public Data
+										</label>
+									</div><br>
+									<b>Document reference:</b>
+									<div id="document_reference" class="control">
+										<label class="radio">
+											<input type="radio" id="results" name="doc_ref" checked>
+											Passages
+										</label>
+										<label class="radio">
+											<input type="radio" id="table_results" name="doc_ref">
+											Tables
+										</label>
+									</div>
+								</div>
+							</div>
+						</article>
+					</div>
+					<!-- Right Column -->
+					<div class="column is-two-thirds">
+						<article id="error_message" class="message is-danger is-hidden">
+							<div class="message-header">
+								<p>Service error</p>
+								<button class="delete" aria-label="delete"></button>
+							</div>
+							<div class="message-body">
+								Something went wrong. Go ahead and ask your question again...
+							</div>
+						</article>
+						<article id="warning_message" class="message is-warning is-hidden">
+							<div class="message-header">
+								<p>No answers found</p>
+								<button class="delete" aria-label="delete"></button>
+							</div>
+							<div class="message-body">
+								Try asking another question...
+							</div>
+						</article>
+						<article id="success_message" class="message is-Success is-hidden">
+							<div class="message-header">
+								<p>Best answers</p>
+								<button class="delete" aria-label="delete"></button>
+							</div>
+							<div class="message-body">
+								Here are the best answers...
+							</div>
+						</article>
+						<!-- Answer -->
+						<div id="answers" class="is-hidden">
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- Menu -->
+		<section class="section">
+			<nav class="level">
+				<p class="level-item has-text-centered">
+					<a class="link is-info">Watson Discovery</a>
+				</p>
+				<p class="level-item has-text-centered">
+					<a class="link is-info">Watson Assistant</a>
+				</p>
+				<p class="level-item has-text-centered">
+					<img src="./images/ibm-logo.jpeg" alt="" style="height: auto; width: 200px;">
+				</p>
+				<p class="level-item has-text-centered">
+					<a class="link is-info">IBM Data & AI</a>
+				</p>
+				<p class="level-item has-text-centered">
+					<a class="link is-info">IBM Cloud</a>
+				</p>
+			</nav>
+		</section>
+		<!-- Footer -->
+		<footer class="footer">
+			<div class="container">
+				<div class="content has-text-centered">
+					<p>
+						Reading Comprehension Demonstration by <strong>Doog</strong>
+					</p>
+				</div>
+			</div>
+		</footer>
+	</body>
+</html>
