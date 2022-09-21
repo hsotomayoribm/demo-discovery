@@ -30,10 +30,14 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 passport.use(new WebAppStrategy({
-  tenantId: "de180cc4-95c8-498f-ac26-9028a575618b",
-  clientId: "01d471a9-3baa-461a-af82-1e3267222542",
-  secret: "M2U2YjUwMmEtMzBiNi00MDNhLWFhZTctYTkyMjczMzY4MGE5",
-  oauthServerUrl: "https://us-south.appid.cloud.ibm.com/oauth/v4/de180cc4-95c8-498f-ac26-9028a575618b",
+  tenantId: "c782545c-c5e8-4c89-ac0e-87a8ce926a5c",
+  //tenantId: "de180cc4-95c8-498f-ac26-9028a575618b",
+  clientId: "09f67097-b9f5-4ac6-b80c-cd859bca7356",
+  //clientId: "01d471a9-3baa-461a-af82-1e3267222542",
+  secret: "MzE1ZGEzZDMtN2VmMC00ZmU4LWEyODAtMjk0Y2I4ZmJlMGFj",
+  //secret: "M2U2YjUwMmEtMzBiNi00MDNhLWFhZTctYTkyMjczMzY4MGE5",
+  oauthServerUrl: "https://us-south.appid.cloud.ibm.com/oauth/v4/c782545c-c5e8-4c89-ac0e-87a8ce926a5c",
+  //oauthServerUrl: "https://us-south.appid.cloud.ibm.com/oauth/v4/de180cc4-95c8-498f-ac26-9028a575618b",
   redirectUri: "http://localhost:3000" + CALLBACK_URL
   }));
 
