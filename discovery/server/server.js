@@ -8,7 +8,7 @@ const request = require("request");
 // watson discovery rest api information
 //dsayers@us.ibm.com
 //Watson Discovery-Plus-Beta-Demos (plus beta)
-const apikey = "nCeFJfEifPWjCCiBUBWh3-cIcROoqQzj8kbtvuQ-PWkE";
+const apikey = "gBGL7CTAMR2p4UWXSg0MZFywOU3uEutxNjC3cZ0VCoPH";
 const endpoint =
 "https://api.us-south.discovery.watson.cloud.ibm.com/instances/29ec7433-c44f-412b-9b1c-2d30c6353934";
 const project_id = "bbc01513-d250-4ae9-abda-11d8feb12b44";
