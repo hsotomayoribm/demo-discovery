@@ -1,0 +1,200 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Discovery - Buscador demo</title>
+    <link rel="stylesheet" href="css/bulma.min.css" />
+    <link rel="stylesheet" href="css/bulma-docs.min.css" />
+    <link rel="stylesheet" href="css/hs-style1.css" />
+    <style>
+      .card {
+        margin-top: 1em;
+      }
+
+      .img-hs {
+        margin: auto;
+        display: flex;
+        justify-content: center;
+      }
+    </style>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script defer src="js/all.js"></script>
+
+    <!--JS-->
+    <script src="js/functions.js"></script>
+    <script src="js/discovery.js"></script>
+  </head>
+  <body>
+    
+    <div class="modal">
+      <div class="modal-background"></div>
+      <div class="modal-content">
+        <div id="modal_table_display" class="card"></div>
+      </div>
+      <button class="modal-close is-large" aria-label="close"></button>
+    </div>
+    <!-- Title/Header -->
+    <div style="background:#fff">
+      <table ><tr  class="img-hs" bgcolor="#fff">
+        <td width="30" class="img-hs" >
+          <img src="images/hamburger-menu.png" width="20" height="25" />
+
+      </td>
+        <td >  <img src="images/logo-entel.svg"  width="75" height=60" /> </td>
+        <td> <div style="font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;font-size: 35px;align-content: center;"> Demo Watson Discovery 
+        </div></td>
+      </tr></table>
+      
+       </div>           
+    <!-- Sub Title -->
+    <!-- Body -->
+    <section class="hero is-small">
+      <script src="https://cdn.appid.cloud.ibm.com/appid-0.3.0.min.js"></script>
+      <!-- Input field (go ahead ask me anything...)-->
+      <div class="hero-body">
+        
+        
+          <p class="control has-icons-left">
+            <input
+              class="input"
+              id="gaama"
+              placeholder="Vamos!, preguntame lo que sea... luego presiona enter "
+            />
+            <span class="icon is-small is-left">
+              <i class="fas fa-search"></i>
+            </span>
+          </p>
+        </div>
+        <!-- Search facets and results -->
+        <div
+          class="
+            columns
+            is-1-mobile is-0-tablet is-3-desktop is-8-widescreen is-2-fullhd
+          "
+        >
+       
+          <!-- Left Column -->
+          <div class="column is-one-third">
+            <!-- Indexed Content -->
+            <article id="content_index" class="message is-link">
+              <div class="message-header">
+                <p>Filtros</p>
+                <button
+                  id="content_index_button"
+                  class="delete"
+                  aria-label="delete"
+                ></button>
+              </div>
+              <div class="message-body">
+                <div id="answer_facets" > 
+                  <div class="answer_facets_hs">
+                  Fuente de datos:
+                  </div>
+                  <div id="content_config" class="is-hidden">
+                    <div class="field">
+                      <div class="control">
+                        <textarea
+                          id="config_json"
+                          class="textarea has-text-link"
+                          placeholder="Paste in config json..."
+                        ></textarea>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="content_sources" class="control">
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"                                           
+                        id="0374bda6-8b44-28a3-0000-0184e3dcb010"
+                        checked
+                      />Enterate
+                    </label>
+                  </div>
+                  <br />
+                </div>
+              </div>
+            </article>
+          </div>
+          <!-- Right Column -->
+          <div class="column is-two-thirds">
+            <article id="error_message" class="message is-danger is-hidden">
+              <div class="message-header">
+                <p>Error en el servicio </p>
+                <button class="delete" aria-label="delete"></button>
+              </div>
+              <div class="message-body">
+                Algo a salido mal. Adelante, haz tu pregunta de nuevo...
+              </div>
+            </article>
+            <article id="warning_message" class="message is-warning is-hidden">
+              <div class="message-header">
+                <p>No se encontraron resultados</p>
+                <button class="delete" aria-label="delete"></button>
+              </div>
+              <div class="message-body">Prueba haciendo otra pregunta...</div>
+            </article>
+            <article id="success_message" class="message is-Success is-hidden">
+              <div class="message-header">
+                <p>Mejores resultados</p>
+                <button class="delete" aria-label="delete"></button>
+              </div>
+              <div class="message-body">
+                ¡Aqui estan los mejores resultados! 
+              </div>
+            </article>
+
+            <!-- Answers (discovery.js - Line 243) -->
+            <div id="answers" class="is-hidden"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="container">
+        <div class="content has-text-centered">
+          <p>
+            
+          </p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+
+    <!-- Menu -->
+    <!--
+    <section class="section">
+      <nav class="level">
+        <p class="level-item has-text-centered">
+          <a class="link is-info">Watson Discovery</a>
+        </p>
+        <p class="level-item has-text-centered">
+          <a class="link is-info">Watson Assistant</a>
+        </p>
+        <p class="level-item has-text-centered">
+          <img
+            src="./images/ibm-logo.jpeg"
+            alt=""
+            style="height: auto; width: 200px"
+          />
+        </p>
+        <p class="level-item has-text-centered">
+          <a class="link is-info">IBM Data & AI</a>
+        </p>
+        <p class="level-item has-text-centered">
+          <a class="link is-info">IBM Cloud</a>
+        </p>
+      </nav>
+    </section>
+    
+    
+-->
+    <style>
+      .pdfobject-container {
+        height: 30rem;
+        border: 1rem solid rgba(0, 0, 0, 0.1);
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.1.1/pdfobject.min.js"></script>
+  </body>
+</html>
